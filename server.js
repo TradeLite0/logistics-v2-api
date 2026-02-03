@@ -21,7 +21,7 @@ app.use(express.json());
 // PostgreSQL Connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl: process.env.DATABASE_URL?.includes('railway.app') ? { rejectUnauthorized: false } : false
 });
 
 // Initialize Database
@@ -399,9 +399,30 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// Start server
-initDB().then(() => {
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log('🚀 Logistics API running on port', PORT);
+// Root route
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Logistics Pro API', 
+    version: '1.0.0',
+    status: 'running',
+    health: '/health'
   });
 });
+
+// Start server
+const startServer = async () => {
+  try {
+    await initDB();
+    console.log('✅ Database initialized');
+  } catch (err) {
+    console.error('❌ Database init error:', err.message);
+    console.log('⚠️  Starting without database...');
+  }
+  
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log('🚀 Logistics API running on port', PORT);
+    console.log('📍 Environment:', process.env.NODE_ENV || 'development');
+  });
+};
+
+startServer();

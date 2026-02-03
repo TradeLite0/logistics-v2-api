@@ -18,15 +18,38 @@ app.use(express.json());
 let pool = null;
 let dbConnected = false;
 
+// Railway provides PG* variables
+const getDatabaseUrl = () => {
+  // Direct DATABASE_URL
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
+  
+  // Railway PG* variables
+  if (process.env.PGHOST && process.env.PGDATABASE) {
+    const user = process.env.PGUSER || 'postgres';
+    const password = process.env.PGPASSWORD || '';
+    const host = process.env.PGHOST;
+    const port = process.env.PGPORT || 5432;
+    const db = process.env.PGDATABASE;
+    return `postgresql://${user}:${password}@${host}:${port}/${db}`;
+  }
+  
+  return null;
+};
+
 const initDB = async () => {
   try {
-    if (!process.env.DATABASE_URL) {
+    const dbUrl = getDatabaseUrl();
+    
+    if (!dbUrl) {
       console.log('⚠️  No DATABASE_URL, running without database');
+      console.log('Available env vars:', Object.keys(process.env).filter(k => k.includes('PG') || k.includes('DB')));
       return false;
     }
+    
+    console.log('🔗 Connecting to database...');
 
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: dbUrl,
       ssl: { rejectUnauthorized: false }
     });
 
